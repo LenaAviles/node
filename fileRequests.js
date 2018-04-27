@@ -1,7 +1,13 @@
 const url = require('url');
 const fs = require('fs');
+const path = require('path');
 
-function getResponse(req, cb) {
+module.exports.default = (req, cb) => {
+    let res = { headers: { 'Content-Type': 'text/plain' }, status: 404, message: 'Not found' };
+    cb(null, res);
+}
+
+module.exports.post = (req, cb) => {    
     const headers = { 'Content-Type': 'text/plain' };
 
     var parsedUrl = url.parse(req.url, true);
@@ -11,8 +17,7 @@ function getResponse(req, cb) {
 
     // All other requests should return HTTP status 404 `Not found`.
     if (!urlParameters.length || !isFileRequest) {
-        let res = { headers, status: 404, message: 'Not found' };
-        cb(null, res);
+        this.default(req, cb);
         return 
     }
     
@@ -32,10 +37,10 @@ function getResponse(req, cb) {
     // (the directory should already exist) in the project directory. 
     // Don't forget about the file names with path : a request with a path `/file/path/to/file.json` 
     // should create a file in `<your_dir_to_store_files>/path/to/file.json`.
-    var filesDirectory = __dirname + '\\requests';
+    var filesDirectory = path.resolve(__dirname, 'requests');
     if (urlParameters.length) {
         urlParameters.forEach(function (dir) {
-            filesDirectory = `${filesDirectory}\\${dir}`;
+            filesDirectory = path.resolve(filesDirectory, dir);
             try {
                 fs.mkdirSync(filesDirectory);
             } catch (err) {
@@ -49,7 +54,7 @@ function getResponse(req, cb) {
     // If everything is OK - return HTTP status 200
     // If a file with the name already exists - return 409 `Conflict`
     // var res = { headers, status: 200, message: '' };
-    var filePath = `${filesDirectory}\\${fileName}`;
+    var filePath = path.resolve(filesDirectory, fileName);
     
     var write = fs.createWriteStream(filePath, { flags: 'wx' });
     req.pipe(write);
@@ -64,14 +69,5 @@ function getResponse(req, cb) {
         if (err) throw err;             
         let res = { headers, status: 200, message: '' };    
         cb(null, res);
-    })        
-
-    // console.log(req.method);
-    // console.log(req.body);
-
-    // console.log(parsedUrl.query.f);
-    // console.log(parsedUrl.pathname);
-    // res.end(parsedUrl.query.f);
+    })
 }
-
-module.exports = getResponse;
